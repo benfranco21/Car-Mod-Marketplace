@@ -79,7 +79,66 @@ all exercised for real). All test data was cleaned up afterward. Not
 yet manually clicked through in a browser — recommended as a sanity
 check before starting Phase 2.
 
+## Phase 2 — Shop side: profile creation & dashboard: COMPLETE, verified
+
+Database (migration: `supabase/migrations/20260824180000_phase2_shop_profile.sql`):
+
+- New `portfolio_images` table (`shop_id`, `storage_path`), RLS:
+  publicly readable, insert/delete restricted to the owning shop's
+  owner.
+- New `portfolio-images` storage bucket (public, so Phase 3 profile
+  pages can render images without auth). Files are uploaded under
+  `<shop_id>/<filename>`; storage policies restrict upload/delete to
+  that shop's owner using the same folder-name convention.
+- This session's Postgres pooler connection string is saved as
+  `DATABASE_URL` in `.env.local` (git-ignored, not committed) —
+  it's how this migration was pushed (`supabase db push --db-url`)
+  and how end-to-end verification below queried/confirmed test data,
+  without needing `supabase login`/`supabase link` in this
+  environment.
+
+Dashboard (`src/app/dashboard/page.tsx`, client component):
+
+- Read-only profile view by default: business name, location,
+  description, services offered (as tags), portfolio photo gallery.
+- "Edit profile" toggles into a form (business name, location,
+  description, services multi-select checkboxes) that updates
+  `shops` and re-syncs `shop_services` (delete-then-reinsert selected
+  rows — simple and correct given there are only 6 possible
+  services).
+- Portfolio section: multi-file upload straight to
+  `portfolio-images/<shop_id>/...`, with a matching row inserted into
+  `portfolio_images`; each photo has a "Remove" button (deletes the
+  storage file, then the row). Thumbnails render via
+  `getPublicUrl()` since the bucket is public.
+
+Verified end-to-end against the real Supabase project via a
+Playwright-driven headless Chromium session (the `chromium-cli` tool
+wasn't available in this environment, so a throwaway Playwright
+script did the driving instead): signed up a test shop owner,
+confirmed the account directly via `DATABASE_URL` (bypassing the
+actual confirmation email), logged in, confirmed the trigger-seeded
+business name/location appeared, edited and saved every field plus
+services, reloaded to confirm the changes persisted (not just local
+state), uploaded two photos, confirmed the public storage URL
+actually resolves (HTTP 200), removed one photo, and reloaded to
+confirm the removal persisted too. Zero console or network errors
+throughout. All test database rows were cleaned up afterward. One
+leftover ~68-byte test image was left behind in the `portfolio-images`
+bucket — Supabase blocks direct `DELETE` on `storage.objects` via
+SQL (it requires the Storage API plus a valid session or a
+service-role key, neither available in that moment) — **this has
+since been deleted manually via the Supabase dashboard.**
+
+Known gap: the automated Playwright pass above is not the same as a
+human clicking through the real UI. An attempt to do that manually
+today hit Supabase's free-tier auth email rate limit before it could
+be completed — worth finishing next session once the rate limit
+resets (sign up a real test shop account via the actual browser,
+click the confirmation email, click through the dashboard).
+
 ## What's next
 
-Phase 2 (shop profile creation + dashboard) per `project-roadmap.md`.
+Phase 3 (car owner search/filter + public shop profile page) per
+`project-roadmap.md`.
 
