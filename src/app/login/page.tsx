@@ -4,6 +4,7 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import Nav from "@/components/Nav";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,54 +46,62 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-sm flex-col gap-6 px-6 py-24">
-      <h1 className="text-2xl font-semibold">Log in</h1>
+    <>
+      <Nav />
+      <main className="mx-auto flex w-full max-w-sm flex-1 flex-col gap-6 px-4 py-16 sm:py-24">
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
+          Log in
+        </h1>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          Email
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Password
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-          />
-        </label>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded bg-black px-4 py-2 text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4 rounded-xl border border-white/10 bg-surface p-6"
         >
-          {submitting ? "Logging in..." : "Log in"}
-        </button>
-      </form>
+          <label className="flex flex-col gap-1.5 text-sm text-muted">
+            Email
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="rounded-lg border border-white/10 bg-background px-3 py-2.5 text-foreground outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
+            />
+          </label>
 
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        No account yet?{" "}
-        <Link href="/signup/car-owner" className="underline">
-          Sign up as a car owner
-        </Link>{" "}
-        or{" "}
-        <Link href="/signup/shop" className="underline">
-          sign up your shop
-        </Link>
-        .
-      </p>
-    </main>
+          <label className="flex flex-col gap-1.5 text-sm text-muted">
+            Password
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="rounded-lg border border-white/10 bg-background px-3 py-2.5 text-foreground outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
+            />
+          </label>
+
+          {error && <p className="text-sm text-action">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-lg bg-action px-5 py-2.5 text-sm font-medium text-white transition hover:bg-action/90 disabled:opacity-50"
+          >
+            {submitting ? "Logging in..." : "Log in"}
+          </button>
+        </form>
+
+        <p className="text-sm text-muted">
+          No account yet?{" "}
+          <Link href="/signup/car-owner" className="text-accent hover:underline">
+            Sign up as a car owner
+          </Link>{" "}
+          or{" "}
+          <Link href="/signup/shop" className="text-accent hover:underline">
+            sign up your shop
+          </Link>
+          .
+        </p>
+      </main>
+    </>
   );
 }
