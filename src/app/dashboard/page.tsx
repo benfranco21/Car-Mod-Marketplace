@@ -4,6 +4,7 @@ import { useEffect, useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import Nav from "@/components/Nav";
 
 type Shop = {
   id: string;
@@ -126,11 +127,6 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, [router]);
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    router.push("/login");
-  }
 
   function startEditing() {
     if (!shop) return;
@@ -270,259 +266,296 @@ export default function DashboardPage() {
     setDeletingImageId(null);
   }
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <>
+        <Nav />
+        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 sm:py-12">
+          <div className="h-8 w-48 animate-pulse rounded bg-surface" />
+          <div className="h-56 animate-pulse rounded-xl border border-white/10 bg-surface" />
+        </main>
+      </>
+    );
+  }
 
   if (loadError || !shop) {
     return (
-      <main className="mx-auto flex max-w-sm flex-col gap-4 px-6 py-24 text-center">
-        <p className="text-sm text-red-600">{loadError}</p>
-        <button onClick={handleSignOut} className="underline">
-          Sign out
-        </button>
-      </main>
+      <>
+        <Nav />
+        <main className="mx-auto flex w-full max-w-sm flex-1 flex-col gap-4 px-4 py-24 text-center">
+          <p className="text-sm text-action">{loadError}</p>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-10 px-6 py-16">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Shop dashboard</h1>
-        <button onClick={handleSignOut} className="text-sm underline">
-          Sign out
-        </button>
-      </div>
+    <>
+      <Nav />
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 px-4 py-8 sm:px-6 sm:py-12">
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          Shop dashboard
+        </h1>
 
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-medium">Profile</h2>
+        <section className="flex flex-col gap-4">
+          <h2 className="font-display text-lg font-medium text-foreground">
+            Profile
+          </h2>
 
-        {!editing ? (
-          <div className="flex flex-col gap-4 rounded border border-zinc-300 p-5 dark:border-zinc-700">
-            <div>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Business name
-              </p>
-              <p className="text-lg">{shop.business_name}</p>
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Location
-              </p>
-              <p>{shop.location}</p>
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Description
-              </p>
-              <p className="whitespace-pre-wrap">
-                {shop.description || (
-                  <span className="text-zinc-400 dark:text-zinc-600">
-                    No description yet.
-                  </span>
-                )}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Services offered
-              </p>
-              {selectedServiceIds.size === 0 ? (
-                <p className="text-zinc-400 dark:text-zinc-600">
-                  No services selected yet.
+          {!editing ? (
+            <div className="flex flex-col gap-4 rounded-xl border border-white/10 bg-surface p-5">
+              <div>
+                <p className="text-sm text-muted">Business name</p>
+                <p className="text-lg text-foreground">{shop.business_name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted">Location</p>
+                <p className="text-foreground">{shop.location}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted">Description</p>
+                <p className="whitespace-pre-wrap text-foreground/90">
+                  {shop.description || (
+                    <span className="text-muted">No description yet.</span>
+                  )}
                 </p>
-              ) : (
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {services
-                    .filter((service) => selectedServiceIds.has(service.id))
-                    .map((service) => (
-                      <span
-                        key={service.id}
-                        className="rounded-full border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
-                      >
-                        {service.name}
-                      </span>
-                    ))}
-                </div>
-              )}
+              </div>
+              <div>
+                <p className="text-sm text-muted">Services offered</p>
+                {selectedServiceIds.size === 0 ? (
+                  <p className="text-muted">No services selected yet.</p>
+                ) : (
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {services
+                      .filter((service) => selectedServiceIds.has(service.id))
+                      .map((service) => (
+                        <span
+                          key={service.id}
+                          className="rounded-full border border-white/10 bg-background px-3 py-1 text-sm text-muted"
+                        >
+                          {service.name}
+                        </span>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={startEditing}
+                className="self-start rounded-lg border border-accent/40 px-4 py-2 text-sm text-accent transition hover:bg-accent/10"
+              >
+                Edit profile
+              </button>
             </div>
-            <button
-              onClick={startEditing}
-              className="self-start rounded bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black"
+          ) : (
+            <form
+              onSubmit={handleSave}
+              className="flex flex-col gap-4 rounded-xl border border-white/10 bg-surface p-5"
             >
-              Edit profile
-            </button>
-          </div>
-        ) : (
-          <form
-            onSubmit={handleSave}
-            className="flex flex-col gap-4 rounded border border-zinc-300 p-5 dark:border-zinc-700"
-          >
-            <label className="flex flex-col gap-1 text-sm">
-              Business name
-              <input
-                type="text"
-                required
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-              />
-            </label>
+              <label className="flex flex-col gap-1.5 text-sm text-muted">
+                Business name
+                <input
+                  type="text"
+                  required
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="rounded-lg border border-white/10 bg-background px-3 py-2.5 text-foreground outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
+                />
+              </label>
 
-            <label className="flex flex-col gap-1 text-sm">
-              Location
-              <input
-                type="text"
-                required
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-              />
-            </label>
+              <label className="flex flex-col gap-1.5 text-sm text-muted">
+                Location
+                <input
+                  type="text"
+                  required
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="rounded-lg border border-white/10 bg-background px-3 py-2.5 text-foreground outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
+                />
+              </label>
 
-            <label className="flex flex-col gap-1 text-sm">
-              Description
-              <textarea
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-              />
-            </label>
+              <label className="flex flex-col gap-1.5 text-sm text-muted">
+                Description
+                <textarea
+                  rows={4}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="rounded-lg border border-white/10 bg-background px-3 py-2.5 text-foreground outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
+                />
+              </label>
 
-            <div className="flex flex-col gap-1 text-sm">
-              Services offered
-              <div className="flex flex-wrap gap-2">
-                {services.map((service) => {
-                  const checked = formServiceIds.has(service.id);
-                  return (
-                    <label
-                      key={service.id}
-                      className={`cursor-pointer rounded-full border px-3 py-1 text-sm ${
-                        checked
-                          ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
-                          : "border-zinc-300 dark:border-zinc-700"
+              <div className="flex flex-col gap-2 text-sm text-muted">
+                Services offered
+                <div className="flex flex-wrap gap-2">
+                  {services.map((service) => {
+                    const checked = formServiceIds.has(service.id);
+                    return (
+                      <label
+                        key={service.id}
+                        className={`cursor-pointer rounded-full border px-3.5 py-1.5 text-sm transition ${
+                          checked
+                            ? "border-accent bg-accent/10 text-accent"
+                            : "border-white/15 text-muted hover:border-white/30 hover:text-foreground"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={checked}
+                          onChange={() => toggleFormService(service.id)}
+                        />
+                        {service.name}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {saveError && <p className="text-sm text-action">{saveError}</p>}
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-lg bg-action px-5 py-2.5 text-sm font-medium text-white transition hover:bg-action/90 disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save changes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditing(false)}
+                  disabled={saving}
+                  className="rounded-lg border border-white/15 px-5 py-2.5 text-sm text-muted transition hover:border-white/30 hover:text-foreground disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <h2 className="font-display text-lg font-medium text-foreground">
+            Portfolio photos
+          </h2>
+
+          <label className="self-start cursor-pointer rounded-lg border border-accent/40 px-4 py-2 text-sm text-accent transition hover:bg-accent/10">
+            {uploading ? "Uploading..." : "Upload photos"}
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleUpload}
+              disabled={uploading}
+              className="hidden"
+            />
+          </label>
+
+          {uploadError && <p className="text-sm text-action">{uploadError}</p>}
+
+          {portfolioImages.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-white/15 bg-surface/50 px-6 py-12 text-center">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="text-muted"
+              >
+                <rect x="3" y="4" width="18" height="14" rx="2" />
+                <path d="m3 15 5-5 4 4 4-4 5 5" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="8" cy="9" r="1.5" />
+              </svg>
+              <p className="text-sm text-muted">No photos uploaded yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {portfolioImages.map((image) => {
+                const { data } = supabase.storage
+                  .from(PORTFOLIO_BUCKET)
+                  .getPublicUrl(image.storage_path);
+                return (
+                  <div
+                    key={image.id}
+                    className="group relative aspect-square overflow-hidden rounded-lg border border-white/10"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={data.publicUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      onClick={() => handleDeleteImage(image)}
+                      disabled={deletingImageId === image.id}
+                      className="absolute right-1.5 top-1.5 rounded-md bg-background/80 px-2 py-1 text-xs text-foreground backdrop-blur transition hover:bg-background disabled:opacity-50"
+                    >
+                      {deletingImageId === image.id ? "..." : "Remove"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <h2 className="font-display text-lg font-medium text-foreground">
+            Leads
+          </h2>
+
+          {leads.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-white/15 bg-surface/50 px-6 py-12 text-center">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="text-muted"
+              >
+                <path
+                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <p className="text-sm text-muted">No quote requests yet.</p>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {leads.map((lead) => (
+                <li key={lead.id}>
+                  <Link
+                    href={`/messages/${lead.id}`}
+                    className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-surface p-4 transition hover:border-accent/50"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-foreground">
+                        {lead.car_owner_name}
+                      </span>
+                      <span className="text-xs text-muted">
+                        {new Date(lead.updated_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs ${
+                        lead.status === "new"
+                          ? "bg-accent/15 text-accent"
+                          : "border border-white/10 text-muted"
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={checked}
-                        onChange={() => toggleFormService(service.id)}
-                      />
-                      {service.name}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            {saveError && <p className="text-sm text-red-600">{saveError}</p>}
-
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
-              >
-                {saving ? "Saving..." : "Save"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditing(false)}
-                disabled={saving}
-                className="rounded border border-zinc-300 px-4 py-2 text-sm disabled:opacity-50 dark:border-zinc-700"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-medium">Portfolio photos</h2>
-
-        <label className="self-start rounded border border-zinc-300 px-4 py-2 text-sm cursor-pointer dark:border-zinc-700">
-          {uploading ? "Uploading..." : "Upload photos"}
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleUpload}
-            disabled={uploading}
-            className="hidden"
-          />
-        </label>
-
-        {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
-
-        {portfolioImages.length === 0 ? (
-          <p className="text-zinc-400 dark:text-zinc-600">
-            No photos uploaded yet.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {portfolioImages.map((image) => {
-              const { data } = supabase.storage
-                .from(PORTFOLIO_BUCKET)
-                .getPublicUrl(image.storage_path);
-              return (
-                <div key={image.id} className="group relative aspect-square">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={data.publicUrl}
-                    alt=""
-                    className="h-full w-full rounded object-cover"
-                  />
-                  <button
-                    onClick={() => handleDeleteImage(image)}
-                    disabled={deletingImageId === image.id}
-                    className="absolute right-1 top-1 rounded bg-black/70 px-2 py-1 text-xs text-white disabled:opacity-50"
-                  >
-                    {deletingImageId === image.id ? "..." : "Remove"}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-medium">Leads</h2>
-
-        {leads.length === 0 ? (
-          <p className="text-zinc-400 dark:text-zinc-600">
-            No quote requests yet.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {leads.map((lead) => (
-              <li key={lead.id}>
-                <Link
-                  href={`/messages/${lead.id}`}
-                  className="flex items-center justify-between gap-4 rounded border border-zinc-300 p-4 transition hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500"
-                >
-                  <div className="flex flex-col gap-1">
-                    <span className="font-medium">{lead.car_owner_name}</span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {new Date(lead.updated_at).toLocaleString()}
+                      {lead.status === "new" ? "New" : "Replied"}
                     </span>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-full px-3 py-1 text-xs ${
-                      lead.status === "new"
-                        ? "bg-black text-white dark:bg-white dark:text-black"
-                        : "border border-zinc-300 dark:border-zinc-700"
-                    }`}
-                  >
-                    {lead.status === "new" ? "New" : "Replied"}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </main>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </main>
+    </>
   );
 }
