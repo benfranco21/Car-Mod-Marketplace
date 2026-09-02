@@ -4,6 +4,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import Nav from "@/components/Nav";
 
 type Viewer = {
   id: string;
@@ -149,84 +150,116 @@ export default function ConversationPage() {
     setSending(false);
   }
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <>
+        <Nav />
+        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 sm:py-12">
+          <div className="h-8 w-40 animate-pulse rounded bg-surface" />
+          <div className="h-56 animate-pulse rounded-xl border border-white/10 bg-surface" />
+        </main>
+      </>
+    );
+  }
 
   if (notFound || !conversation || !viewer) {
     return (
-      <main className="mx-auto flex max-w-sm flex-col gap-4 px-6 py-24 text-center">
-        <p className="text-zinc-600 dark:text-zinc-400">
-          We couldn&apos;t find that conversation.
-        </p>
-        <Link href="/search" className="underline">
-          Back to search
-        </Link>
-      </main>
+      <>
+        <Nav />
+        <main className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center gap-4 px-4 py-24 text-center">
+          <svg
+            width="40"
+            height="40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="text-muted"
+          >
+            <path
+              d="M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4m0-6V5a2 2 0 0 0-2-2h-4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path d="M9 9l6 6m0-6-6 6" strokeLinecap="round" />
+          </svg>
+          <p className="text-foreground">We couldn&apos;t find that conversation.</p>
+          <Link href="/search" className="text-accent hover:underline">
+            Back to search
+          </Link>
+        </main>
+      </>
     );
   }
 
   const backHref = viewer.role === "shop_owner" ? "/dashboard" : "/messages";
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16">
-      <div className="flex flex-col gap-1">
-        <Link href={backHref} className="text-sm underline">
-          Back
-        </Link>
-        <h1 className="text-2xl font-semibold">{otherPartyName}</h1>
-      </div>
+    <>
+      <Nav />
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
+        <div className="flex flex-col gap-1">
+          <Link href={backHref} className="text-sm text-accent hover:underline">
+            Back
+          </Link>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            {otherPartyName}
+          </h1>
+        </div>
 
-      <div className="flex flex-col gap-4">
-        {messages.length === 0 ? (
-          <p className="text-zinc-400 dark:text-zinc-600">No messages yet.</p>
-        ) : (
-          messages.map((message) => {
-            const isOwnMessage = message.sender_id === viewer.id;
-            return (
-              <div
-                key={message.id}
-                className={`flex flex-col gap-1 rounded border p-3 ${
-                  isOwnMessage
-                    ? "self-end border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
-                    : "self-start border-zinc-300 dark:border-zinc-700"
-                }`}
-              >
-                <p className="whitespace-pre-wrap text-sm">{message.body}</p>
-                <p
-                  className={`text-xs ${
+        <div className="flex flex-col gap-3">
+          {messages.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-white/15 bg-surface/50 px-6 py-10 text-center">
+              <p className="text-sm text-muted">
+                No messages yet — say hello to start the conversation.
+              </p>
+            </div>
+          ) : (
+            messages.map((message) => {
+              const isOwnMessage = message.sender_id === viewer.id;
+              return (
+                <div
+                  key={message.id}
+                  className={`flex max-w-[85%] flex-col gap-1 rounded-xl border p-3 ${
                     isOwnMessage
-                      ? "text-zinc-300 dark:text-zinc-600"
-                      : "text-zinc-500 dark:text-zinc-400"
+                      ? "self-end border-accent/30 bg-accent/10"
+                      : "self-start border-white/10 bg-surface"
                   }`}
                 >
-                  {isOwnMessage ? "You" : otherPartyName} ·{" "}
-                  {new Date(message.created_at).toLocaleString()}
-                </p>
-              </div>
-            );
-          })
-        )}
-      </div>
+                  <p className="whitespace-pre-wrap text-sm text-foreground">
+                    {message.body}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {isOwnMessage ? "You" : otherPartyName} ·{" "}
+                    {new Date(message.created_at).toLocaleString()}
+                  </p>
+                </div>
+              );
+            })
+          )}
+        </div>
 
-      <form onSubmit={handleReply} className="flex flex-col gap-3">
-        <textarea
-          required
-          rows={3}
-          placeholder="Write a reply..."
-          value={replyBody}
-          onChange={(e) => setReplyBody(e.target.value)}
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-        />
+        <form onSubmit={handleReply} className="flex flex-col gap-3">
+          <textarea
+            required
+            rows={3}
+            placeholder="Write a reply..."
+            value={replyBody}
+            onChange={(e) => setReplyBody(e.target.value)}
+            className="rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-foreground outline-none transition placeholder:text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent"
+          />
 
-        {sendError && <p className="text-sm text-red-600">{sendError}</p>}
+          {sendError && <p className="text-sm text-action">{sendError}</p>}
 
-        <button
-          type="submit"
-          disabled={sending || replyBody.trim() === ""}
-          className="self-start rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
-        >
-          {sending ? "Sending..." : "Send"}
-        </button>
-      </form>
-    </main>
+          <button
+            type="submit"
+            disabled={sending || replyBody.trim() === ""}
+            className="self-start rounded-lg bg-action px-5 py-2.5 text-sm font-medium text-white transition hover:bg-action/90 disabled:opacity-50"
+          >
+            {sending ? "Sending..." : "Send"}
+          </button>
+        </form>
+      </main>
+    </>
   );
 }
