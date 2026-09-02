@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, FormEvent } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 
@@ -17,10 +17,17 @@ type PortfolioImage = {
   storage_path: string;
 };
 
+type Viewer = {
+  id: string;
+  name: string;
+  role: "car_owner" | "shop_owner";
+};
+
 const PORTFOLIO_BUCKET = "portfolio-images";
 
 export default function ShopProfilePage() {
   const params = useParams<{ shopId: string }>();
+  const router = useRouter();
   const shopId = params.shopId;
 
   const [loading, setLoading] = useState(true);
@@ -28,6 +35,14 @@ export default function ShopProfilePage() {
   const [shop, setShop] = useState<Shop | null>(null);
   const [serviceNames, setServiceNames] = useState<string[]>([]);
   const [portfolioImages, setPortfolioImages] = useState<PortfolioImage[]>([]);
+
+  const [viewer, setViewer] = useState<Viewer | null>(null);
+  const [existingConversationId, setExistingConversationId] = useState<
+    string | null
+  >(null);
+  const [messageBody, setMessageBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,18 +62,23 @@ export default function ShopProfilePage() {
         return;
       }
 
-      const [{ data: shopServicesData }, { data: portfolioData }] =
-        await Promise.all([
-          supabase
-            .from("shop_services")
-            .select("services(name)")
-            .eq("shop_id", shopRow.id),
-          supabase
-            .from("portfolio_images")
-            .select("id, storage_path")
-            .eq("shop_id", shopRow.id)
-            .order("created_at"),
-        ]);
+      const [
+        { data: shopServicesData },
+        { data: portfolioData },
+        { data: sessionData },
+      ] = await Promise.all([
+        supabase
+          .from("shop_services")
+          .select("services(name)")
+          .eq("shop_id", shopRow.id)
+          .returns<{ services: { name: string } | null }[]>(),
+        supabase
+          .from("portfolio_images")
+          .select("id, storage_path")
+          .eq("shop_id", shopRow.id)
+          .order("created_at"),
+        supabase.auth.getSession(),
+      ]);
 
       if (cancelled) return;
 
@@ -69,6 +89,34 @@ export default function ShopProfilePage() {
           .filter((name): name is string => !!name)
       );
       setPortfolioImages(portfolioData ?? []);
+
+      const authUser = sessionData.session?.user;
+      if (authUser) {
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("id, name, role")
+          .eq("id", authUser.id)
+          .single();
+
+        if (cancelled) return;
+
+        if (userRow) {
+          setViewer(userRow);
+
+          if (userRow.role === "car_owner") {
+            const { data: conversationRow } = await supabase
+              .from("conversations")
+              .select("id")
+              .eq("shop_id", shopRow.id)
+              .eq("car_owner_id", userRow.id)
+              .maybeSingle();
+
+            if (cancelled) return;
+            setExistingConversationId(conversationRow?.id ?? null);
+          }
+        }
+      }
+
       setLoading(false);
     }
 
@@ -77,6 +125,44 @@ export default function ShopProfilePage() {
       cancelled = true;
     };
   }, [shopId]);
+
+  async function handleSendMessage(e: FormEvent) {
+    e.preventDefault();
+    if (!shop || !viewer || messageBody.trim() === "") return;
+
+    setSendError(null);
+    setSending(true);
+
+    const { data: conversation, error: conversationError } = await supabase
+      .from("conversations")
+      .insert({
+        shop_id: shop.id,
+        car_owner_id: viewer.id,
+        car_owner_name: viewer.name,
+      })
+      .select("id")
+      .single();
+
+    if (conversationError || !conversation) {
+      setSendError(conversationError?.message ?? "Couldn't start the conversation.");
+      setSending(false);
+      return;
+    }
+
+    const { error: messageError } = await supabase.from("messages").insert({
+      conversation_id: conversation.id,
+      sender_id: viewer.id,
+      body: messageBody.trim(),
+    });
+
+    if (messageError) {
+      setSendError(messageError.message);
+      setSending(false);
+      return;
+    }
+
+    router.push(`/messages/${conversation.id}`);
+  }
 
   if (loading) return null;
 
@@ -124,14 +210,54 @@ export default function ShopProfilePage() {
           </div>
         )}
 
-        <button
-          type="button"
-          disabled
-          title="Coming soon"
-          className="self-start rounded bg-black px-4 py-2 text-sm text-white opacity-50 dark:bg-white dark:text-black"
-        >
-          Request a quote
-        </button>
+        {!viewer ? (
+          <div className="rounded border border-zinc-300 p-4 text-sm dark:border-zinc-700">
+            <Link href="/login" className="underline">
+              Log in
+            </Link>{" "}
+            or{" "}
+            <Link href="/signup/car-owner" className="underline">
+              sign up
+            </Link>{" "}
+            to request a quote from this shop.
+          </div>
+        ) : viewer.role === "car_owner" ? (
+          existingConversationId ? (
+            <Link
+              href={`/messages/${existingConversationId}`}
+              className="self-start rounded bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black"
+            >
+              View conversation
+            </Link>
+          ) : (
+            <form
+              onSubmit={handleSendMessage}
+              className="flex flex-col gap-3 rounded border border-zinc-300 p-4 dark:border-zinc-700"
+            >
+              <label className="flex flex-col gap-1 text-sm">
+                Request a quote
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Tell the shop what you need..."
+                  value={messageBody}
+                  onChange={(e) => setMessageBody(e.target.value)}
+                  className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                />
+              </label>
+
+              {sendError && <p className="text-sm text-red-600">{sendError}</p>}
+
+              <button
+                type="submit"
+                disabled={sending || messageBody.trim() === ""}
+                className="self-start rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+              >
+                {sending ? "Sending..." : "Send message"}
+              </button>
+            </form>
+          )
+        ) : null}
       </div>
 
       <section className="flex flex-col gap-4">

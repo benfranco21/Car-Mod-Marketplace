@@ -184,7 +184,88 @@ throughout. All test data (the auth user, which cascades to
 storage file) was cleaned up afterward — confirmed the shop row no
 longer exists post-cleanup.
 
+## Phase 4 — The core loop: contact / quote request: COMPLETE, verified
+
+Database (migration: `supabase/migrations/20260902123000_phase4_messaging.sql`):
+
+- New `conversations` table: one thread per `(shop_id, car_owner_id)`
+  pair (unique constraint — repeated quote requests to the same shop
+  reuse the same thread), `status` (`'new' | 'replied'`, defaults to
+  `'new'`), `updated_at` for inbox sorting.
+- New `messages` table: `conversation_id`, `sender_id`, `body`,
+  `created_at`.
+- RLS on both restricts read/write to the two participants (the car
+  owner, or the shop's owner via a join through `shops.owner_id`) —
+  unlike Phase 1-3's public tables, these are private by default.
+  Confirmed anonymous REST calls return `[]`/`401` on both tables.
+- **Deliberate design choice**: `conversations.car_owner_name` is a
+  denormalized snapshot taken at creation time, not a join to
+  `public.users`. Postgres RLS is row-level only — a policy letting a
+  shop owner read a car owner's `users` row would have exposed the
+  *entire* row (including `email`), not just `name`, however narrowly
+  the app's own queries were scoped. Snapshotting the name avoids
+  needing any new `users` policy at all, so `email` is never in a row
+  a shop owner can reach. Since nothing in the app lets a user edit
+  their `name` after signup, staleness isn't a practical concern.
+- Status only ever moves `'new'` → `'replied'`, flipped the first time
+  the shop owner sends a message in a conversation; it does not
+  revert to `'new'` on a later car-owner follow-up. Deliberately
+  simple "have I responded to this lead" tracking, not a full
+  unread/needs-reply indicator.
+
+Pages built (client components):
+
+- Shop profile page (`/shops/[shopId]`) — the disabled Phase 3
+  placeholder is now a real action with three states: logged out
+  shows an inline "Log in or sign up to request a quote" prompt (no
+  forced redirect away from the page); a logged-in car owner with no
+  existing thread gets a textarea right on the page, and sending it
+  creates the conversation + first message together before routing to
+  the thread; a car owner who already has a thread with this shop
+  gets a "View conversation" link instead of a second compose box.
+  Logged-in shop owners never see this section at all (including on
+  their own shop's profile) — messaging is car-owner → shop only.
+- `/messages/[conversationId]` — the shared thread view for both
+  sides (requires login; redirects to `/login` if signed out). Shows
+  the other party's name (the shop's `business_name` for a car owner,
+  the conversation's snapshotted `car_owner_name` for a shop owner),
+  each message labeled "You" vs. the other party, and a reply box.
+  Sending a reply appends it locally (no full refetch) and, only when
+  the sender is a shop owner, flips `status` to `'replied'`.
+- `/messages` — new car owner inbox: their conversations sorted by
+  most recent activity, shop name + status badge, linking into the
+  thread. (Labeled "Awaiting reply" / "Replied" here, vs. "New" /
+  "Replied" on the shop's side — same underlying status, worded for
+  which side is looking at it.)
+- Dashboard (`src/app/dashboard/page.tsx`) — new "Leads" section below
+  Portfolio: the shop's conversations sorted by most recent activity,
+  car owner name + new/replied badge, linking into the same thread
+  view.
+
+Verified end-to-end with a real Playwright-driven Chromium session
+against two ephemeral real accounts (a shop owner and a car owner),
+created the same way as Phase 3's verification — direct SQL insert
+into `auth.users` (bypassing GoTrue's email-domain validation and any
+confirmation email), with `handle_new_user` firing normally. Using
+two separate browser contexts (one per role, real login through the
+`/login` form, not session injection) confirmed the full loop for
+real: logged-out visitor sees the prompt with no compose box; the car
+owner sends a first message and lands on the thread with it visible;
+the shop owner sees the lead in their dashboard labeled "New," opens
+it, sees the car owner's message, and replies; the dashboard badge
+flips to "Replied"; the shop owner's own profile page shows no quote
+UI; the car owner sees the shop's reply in the thread and "Replied" in
+their own `/messages` inbox; revisiting the shop profile now shows
+"View conversation" instead of a second compose box. Also confirmed
+anonymous REST calls to the specific conversation and message rows
+created during this test both returned `[]`, proving RLS actually
+enforces participant-only access rather than just the app UI choosing
+not to show it. All test data (both auth users, cascading to their
+`shops`/`conversations`/`messages` rows) was cleaned up afterward —
+confirmed the shop row and all conversations were gone.
+
 ## What's next
 
-Phase 4 (quote requests + in-app messaging) per `project-roadmap.md`.
+Phase 5 (seed real shop data, walk real people through the app) per
+`project-roadmap.md`.
 

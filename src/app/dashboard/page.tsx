@@ -2,6 +2,7 @@
 
 import { useEffect, useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 
 type Shop = {
@@ -21,6 +22,13 @@ type PortfolioImage = {
   storage_path: string;
 };
 
+type Lead = {
+  id: string;
+  car_owner_name: string;
+  status: "new" | "replied";
+  updated_at: string;
+};
+
 const PORTFOLIO_BUCKET = "portfolio-images";
 
 export default function DashboardPage() {
@@ -37,6 +45,7 @@ export default function DashboardPage() {
   const [portfolioImages, setPortfolioImages] = useState<PortfolioImage[]>(
     []
   );
+  const [leads, setLeads] = useState<Lead[]>([]);
 
   const [editing, setEditing] = useState(false);
   const [businessName, setBusinessName] = useState("");
@@ -82,7 +91,7 @@ export default function DashboardPage() {
         return;
       }
 
-      const [{ data: shopServicesData }, { data: portfolioData }] =
+      const [{ data: shopServicesData }, { data: portfolioData }, { data: leadsData }] =
         await Promise.all([
           supabase
             .from("shop_services")
@@ -93,6 +102,11 @@ export default function DashboardPage() {
             .select("id, storage_path")
             .eq("shop_id", shopRow.id)
             .order("created_at"),
+          supabase
+            .from("conversations")
+            .select("id, car_owner_name, status, updated_at")
+            .eq("shop_id", shopRow.id)
+            .order("updated_at", { ascending: false }),
         ]);
 
       if (cancelled) return;
@@ -103,6 +117,7 @@ export default function DashboardPage() {
         new Set((shopServicesData ?? []).map((row) => row.service_id))
       );
       setPortfolioImages(portfolioData ?? []);
+      setLeads(leadsData ?? []);
       setLoading(false);
     }
 
@@ -469,6 +484,43 @@ export default function DashboardPage() {
               );
             })}
           </div>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-medium">Leads</h2>
+
+        {leads.length === 0 ? (
+          <p className="text-zinc-400 dark:text-zinc-600">
+            No quote requests yet.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {leads.map((lead) => (
+              <li key={lead.id}>
+                <Link
+                  href={`/messages/${lead.id}`}
+                  className="flex items-center justify-between gap-4 rounded border border-zinc-300 p-4 transition hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500"
+                >
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium">{lead.car_owner_name}</span>
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {new Date(lead.updated_at).toLocaleString()}
+                    </span>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs ${
+                      lead.status === "new"
+                        ? "bg-black text-white dark:bg-white dark:text-black"
+                        : "border border-zinc-300 dark:border-zinc-700"
+                    }`}
+                  >
+                    {lead.status === "new" ? "New" : "Replied"}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </main>

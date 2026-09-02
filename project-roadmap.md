@@ -99,12 +99,12 @@ shops, and open a shop's full profile.
 **Goal:** A car owner can reach a shop, and the shop can respond. This is
 the single most important phase — it's the actual product.
 
-- [ ] Build a "request a quote" or "message this shop" action on the shop
+- [x] Build a "request a quote" or "message this shop" action on the shop
       profile page
-- [ ] Build a simple messaging/conversation view (car owner side and shop
+- [x] Build a simple messaging/conversation view (car owner side and shop
       side both need to see the same thread)
-- [ ] Wire the shop dashboard's lead inbox to show new messages/requests
-- [ ] Add basic status (e.g. "new" vs "replied") to leads in the dashboard
+- [x] Wire the shop dashboard's lead inbox to show new messages/requests
+- [x] Add basic status (e.g. "new" vs "replied") to leads in the dashboard
 
 **Done when:** a test car owner account can message a test shop account,
 and the shop account can see and reply to that message.
