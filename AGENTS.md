@@ -137,8 +137,54 @@ be completed — worth finishing next session once the rate limit
 resets (sign up a real test shop account via the actual browser,
 click the confirmation email, click through the dashboard).
 
+## Phase 3 — Car owner side: search, filter & shop profile view: COMPLETE, verified
+
+No new migration needed — the Phase 1/2 migrations already made
+`shops`, `services`, `shop_services`, and `portfolio_images` publicly
+readable (`using (true)` on all four `select` policies). Confirmed
+this live via anonymous (no-session) REST calls before building
+anything.
+
+Pages built (client components):
+
+- `/search` — rebuilt from the Phase 1 placeholder into a fully public
+  browse page (no login required, unlike the old placeholder that
+  redirected to `/login`). Fetches all shops with their embedded
+  `shop_services`, then filters client-side: service category chips
+  (multi-select, OR match) and a location text field (case-insensitive
+  substring match). Header shows "Log in" when signed out or "Sign
+  out" when signed in, but never gates the page itself. Empty state
+  when no shops match.
+- `/shops/[shopId]` — new public, read-only shop profile page:
+  business name, location, description, service tags, portfolio photo
+  gallery (same `getPublicUrl()` pattern as the dashboard). A disabled
+  "Request a quote" button is a placeholder for Phase 4. An invalid/
+  unknown shop id shows a friendly "couldn't find that shop" message
+  with a link back to `/search`, instead of erroring.
+- Search results link directly to `/shops/[shop.id]`.
+
+Verified end-to-end with a real Playwright-driven headless Chromium
+session, deliberately using a **cookie-free browser context** (not
+just "not clicking sign out") to prove the public-page requirement.
+Created a real temporary shop-owner account directly via a SQL insert
+into `auth.users` (bypassing GoTrue's `signUp()` — a plain
+`@example.com` test address was rejected by Supabase's email
+validator, `@gmail.com` was accepted, and inserting directly avoided
+sending any confirmation email at all), with the same `handle_new_user`
+trigger firing to create `public.users`/`shops`. Logged in as that
+user just long enough to set services and upload one real photo, then
+signed out — the browser context had zero cookies when it loaded the
+profile page, and every field, service tag, and the uploaded photo
+(HTTP 200 from its public storage URL) rendered correctly. Also
+confirmed clicking a shop card in `/search` navigates to the correct
+`/shops/[shopId]` URL, and that an unknown shop id renders the
+not-found state instead of crashing. Zero console/network errors
+throughout. All test data (the auth user, which cascades to
+`users`/`shops`/`shop_services`/`portfolio_images`, plus the uploaded
+storage file) was cleaned up afterward — confirmed the shop row no
+longer exists post-cleanup.
+
 ## What's next
 
-Phase 3 (car owner search/filter + public shop profile page) per
-`project-roadmap.md`.
+Phase 4 (quote requests + in-app messaging) per `project-roadmap.md`.
 

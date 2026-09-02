@@ -83,11 +83,11 @@ see it saved correctly in the database.
 ## Phase 3 — Car owner side: search, filter & shop profile view
 **Goal:** A car owner can find and view a shop.
 
-- [ ] Build the search/browse page with filter by service category and
+- [x] Build the search/browse page with filter by service category and
       location
-- [ ] Build the public shop profile page (read-only view of what shops
+- [x] Build the public shop profile page (read-only view of what shops
       created in Phase 2)
-- [ ] Connect search results to shop profile pages (tap a result, land on
+- [x] Connect search results to shop profile pages (tap a result, land on
       the profile)
 
 **Done when:** a car owner can filter by category, see a list of matching
