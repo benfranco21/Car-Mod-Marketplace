@@ -264,6 +264,81 @@ not to show it. All test data (both auth users, cascading to their
 `shops`/`conversations`/`messages` rows) was cleaned up afterward —
 confirmed the shop row and all conversations were gone.
 
+## Visual design pass — "Midnight racer": COMPLETE, verified, live
+
+Not a numbered roadmap phase — a cross-cutting visual pass applied on
+top of the functionality built in Phases 1-4. Purely visual; no
+behavior changed.
+
+Design system, wired as global Tailwind v4 tokens in
+`src/app/globals.css` (`@theme inline`) and fonts in `src/app/layout.tsx`:
+
+- Background `#0B0E14`, surface `#1A2230`, accent cyan `#4FD8E0`
+  (links/highlights/active nav), action red `#E14F3D` (reserved for
+  exactly one primary button per screen — e.g. "Send message," "Save
+  changes," "Log in" — never used decoratively), text `#EAF0F6` /
+  `#8C97A6` (secondary). Display font Oswald (headings, wordmark),
+  body font Inter, both via `next/font/google`.
+- New shared `src/components/Nav.tsx` (client component): wordmark,
+  and auth-aware right side (Log in when signed out; Dashboard or
+  Messages — role-dependent — plus Sign out when signed in). Used on
+  every page below instead of each page rolling its own header/sign-
+  out button.
+
+Applied to all 7 existing functional pages — `/search`,
+`/shops/[shopId]`, `/dashboard`, `/messages/[conversationId]`,
+`/messages`, `/login`, `/signup/car-owner`, `/signup/shop` — plus the
+shared `Nav`. Root `/` was deliberately left untouched (still the
+default `create-next-app` placeholder; a separate task). Empty/
+loading/not-found states across these pages got on-brand treatment
+(icon + message, pulse skeletons) instead of plain grey placeholder
+text. The "one primary action per screen" rule holds even on the
+dashboard's busiest state (the profile edit form): "Save changes" is
+the only action-red element next to several accent-outlined buttons
+(Edit profile, Upload photos, service chips, Cancel).
+
+Pushed as 8 separate commits — design foundation + `/search` together
+first, then each of the other 6 pages as its own commit — specifically
+so a problem in one page's styling could be isolated and fixed without
+touching the others, per explicit instruction after the Phase 3/4
+push miss below.
+
+Verified per page before each push: `tsc --noEmit` + `eslint` clean,
+a full `next build` (matching what Vercel actually runs, to catch
+anything a type-check alone wouldn't), then Playwright screenshots at
+mobile (390px) and desktop (1280px) widths. Covered every conditional
+UI state, not just the happy path: loading skeletons, empty states,
+the shop-profile not-found state, the logged-out quote prompt, the
+car-owner compose form vs. the "View conversation" link for a
+returning car owner, and the dashboard's read vs. edit-mode profile
+view — using two ephemeral real accounts (a shop owner and a car
+owner) with real populated data (a shop with services/description, a
+conversation with real messages), created and cleaned up the same way
+as Phase 3/4's verification. Zero console/page errors throughout.
+After the final push, confirmed live in production against
+`https://car-mod-marketplace.vercel.app` via both content-marker curl
+checks on every page and real Playwright screenshots against the live
+URL (not just local dev) — including confirming the shop profile
+page's new loading skeleton is what's actually being served
+server-side, since that page's real content only appears after
+client-side data fetching resolves.
+
+**Incident during this session, since corrected:** after Phase 3 and
+Phase 4 were built and marked "verified, pushed" in this file, they
+had in fact only been *committed locally* — `git push` was never run.
+Vercel's production deployment silently stayed on the Phase 2 commit
+for over a week of (accurately documented, but unpushed) work. The
+user caught this by noticing Vercel's dashboard hadn't redeployed.
+Root cause was purely a missed step, not a Vercel/webhook problem —
+`git status` immediately showed "ahead of origin/main by 2 commits."
+Both commits were then pushed with nothing else changed. **Lesson
+applied for the rest of this session and going forward: `git push`
+immediately after every commit, never batch commits locally and push
+later** — confirmed via `git log origin/main` after every subsequent
+push in this session, and this design pass's 8 commits were each
+pushed individually rather than batched, partly for exactly this
+reason.
+
 ## What's next
 
 Phase 5 (seed real shop data, walk real people through the app) per
