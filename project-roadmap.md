@@ -142,6 +142,22 @@ of a shop owner without explaining away rough edges.
 
 ---
 
+## Future phases — deliberately deferred past Phase 5
+
+**Social feed:** shops post updates (new work, availability, offers);
+car owners follow shops and scroll a chronological feed of posts from
+shops they follow; posts link back to the shop's profile and quote
+request flow.
+
+Deliberately not scheduled as a numbered phase yet — it's a
+meaningful chunk of new product surface (follows, a feed, a posting
+UI for shops), and building it before Phase 5's real-world testing
+would risk polishing a feature before we know the core loop (search →
+profile → quote → message) actually works for real shops and car
+owners. Revisit once Phase 5 validates that loop.
+
+---
+
 ## Backlog — deliberately not in MVP
 Keep this list so good ideas aren't lost, but don't build any of it until
 the phases above are done and validated:
