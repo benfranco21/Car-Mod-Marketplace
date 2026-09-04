@@ -132,7 +132,7 @@ your pitch, not just to prove the concept works.
 
 - [ ] Clean up styling/spacing pass across all screens
 - [ ] Add basic empty states (e.g. "no shops match your filters yet")
-- [ ] Add a simple landing/homepage explaining what the app is, for shops
+- [x] Add a simple landing/homepage explaining what the app is, for shops
       landing on it cold
 - [ ] Confirm the app works properly on mobile browsers specifically
       (most users will be on their phones)

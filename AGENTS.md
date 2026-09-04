@@ -339,6 +339,40 @@ push in this session, and this design pass's 8 commits were each
 pushed individually rather than batched, partly for exactly this
 reason.
 
+## Homepage ("/"): COMPLETE, verified, live
+
+Not a numbered roadmap phase — the root `/` was deliberately left as
+the default `create-next-app` placeholder during the Midnight racer
+design pass; this replaces it with a real landing page in the same
+design system.
+
+`src/app/page.tsx` (server component; no data fetching, so no
+loading/error states needed) — shared `Nav`, then three sections:
+
+- Hero: headline, one-sentence explanation, two CTAs — "Find a shop"
+  (`/search`, action-red — the page's one primary action) and "List
+  your business" (`/signup/shop`, accent-outlined secondary).
+- "For car owners": three short value props (search by service
+  category, message shops directly instead of losing DMs in Facebook,
+  built for South African car culture).
+- "For shop owners": two value props (get found by active searchers,
+  manage leads in one place) plus a second "List your business" link
+  — kept accent-outlined rather than action-red, since action-red is
+  reserved for one primary button per screen and the hero already
+  used it for this same destination.
+
+Verified the same way as the rest of the Midnight racer pass:
+`tsc --noEmit` + `eslint` clean, a full `next build`, then
+Playwright screenshots at mobile (390px) and desktop (1280px) —
+zero console/page errors. Playwright itself isn't a project
+dependency; it was installed as a throwaway dev-only package in the
+scratchpad directory (not `package.json`) purely to drive the
+screenshots, same pattern as every other phase's verification.
+Committed and pushed immediately (per the lesson logged above), then
+confirmed live against `https://car-mod-marketplace.vercel.app/` via
+both a content-marker curl check and real Playwright screenshots
+against the live URL, matching the local screenshots pixel-for-pixel.
+
 ## What's next
 
 Phase 5 (seed real shop data, walk real people through the app) per
