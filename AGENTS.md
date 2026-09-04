@@ -373,8 +373,69 @@ confirmed live against `https://car-mod-marketplace.vercel.app/` via
 both a content-marker curl check and real Playwright screenshots
 against the live URL, matching the local screenshots pixel-for-pixel.
 
+## Demo data seeded for testing/pitching: mostly complete
+
+Ahead of Phase 5's real shop outreach, seeded 6 demo shop accounts +
+1 demo car owner account directly into the live Supabase database
+(same DB backing both local dev and production — no deploy needed
+for data), using the same direct-`auth.users`-insert technique as
+Phase 3/4's verification (bypassing GoTrue signup emails, with
+`handle_new_user` firing normally to create the matching
+`users`/`shops` rows). Covers all 6 service categories and 5 SA
+cities, with two shops deliberately both in Cape Town offering
+different services so the location filter alone visibly narrows
+results:
+
+- Cape Town Wrap & Tint Co. (Cape Town) — Wraps, PPF
+- Highveld Exhaust & Tuning (Centurion) — Exhaust, Tuning
+- Joburg Alloy Wheel Studio (Johannesburg) — Wheels
+- Durban Custom Fabrication (Durban) — Fabrication
+- Pretoria Wrap Works (Pretoria) — Wraps, PPF
+- Mother City Dyno & Tuning (Cape Town) — Tuning
+
+Each shop got a real business name/description and 2-3 portfolio
+photos uploaded through that shop owner's own authenticated session
+(matching the real storage RLS policy path, not a service-role
+bypass). Demo shop-side login was also handed to the user (not just
+the car owner account) specifically so the full core loop — search →
+message → reply — can be demoed solo, switching between two logged-in
+browser contexts, without needing a second real person in the room.
+Verified end-to-end with a real Playwright session against
+`https://car-mod-marketplace.vercel.app`: location filter (Cape Town)
+and service filter (Wraps) both narrow correctly, all 16 portfolio
+image URLs resolve (HTTP 200), and a full send → lead → reply →
+confirm-reply pass worked with zero console errors — then that one
+test conversation was deleted afterward so the demo pair starts with
+a clean compose box rather than an existing thread.
+
+**Still pending:**
+- The 2-3 "portfolio photos" per shop are custom flat-illustration
+  graphics (wrapped car, alloy wheel, exhaust tips, etc.), not real
+  stock photography — no reliable image source was available in that
+  session. Swap for real stock/placeholder car photos before this is
+  shown to actual shop owners.
+- The 6 demo shop-owner email addresses (e.g. `jaco.meyer@gmail.com`)
+  were invented for realism, not checked against real inboxes. Since
+  they were only ever used for direct-SQL account creation (GoTrue
+  never sent anything to them), this is low-risk, but worth confirming
+  none happen to be real/active before relying on this data long-term.
+
+## Billing: PayFast Sole Trader registration in progress
+
+Not yet reflected in the codebase — no PayFast integration exists
+yet. The user is registering a PayFast Sole Trader merchant account
+outside of this repo/session. **Why:** PayFast is the intended
+payment processor for subscription billing (shops paying to be
+listed/featured), and the merchant account has to exist before any
+PayFast integration work (API keys, webhook handling, checkout flow)
+can start. **How to apply:** don't start on subscription billing
+until the user confirms this registration is complete and shares the
+resulting merchant credentials — there's nothing to build against
+yet.
+
 ## What's next
 
-Phase 5 (seed real shop data, walk real people through the app) per
-`project-roadmap.md`.
+Phase 5 (walk real people through the app) per `project-roadmap.md` —
+the demo data above covers the "seed shops" half of that phase; real
+outreach is still to come.
 
