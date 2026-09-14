@@ -28,6 +28,7 @@ export default function SearchPage() {
     new Set()
   );
   const [locationQuery, setLocationQuery] = useState("");
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -66,6 +67,29 @@ export default function SearchPage() {
     });
   }
 
+  // Always derived from the shops currently in the database, never a static
+  // list — new locations show up automatically as shops sign up with one.
+  // Deduped case-insensitively (shop owners free-type this field at signup,
+  // so "Cape Town" and "cape town" are the same place, not two suggestions).
+  const distinctLocations = useMemo(() => {
+    const byLowercase = new Map<string, string>();
+    for (const shop of shops) {
+      const location = shop.location.trim();
+      if (!location) continue;
+      const key = location.toLowerCase();
+      if (!byLowercase.has(key)) byLowercase.set(key, location);
+    }
+    return Array.from(byLowercase.values()).sort((a, b) => a.localeCompare(b));
+  }, [shops]);
+
+  const locationSuggestions = useMemo(() => {
+    const query = locationQuery.trim().toLowerCase();
+    if (query === "") return distinctLocations;
+    return distinctLocations.filter((location) =>
+      location.toLowerCase().includes(query)
+    );
+  }, [distinctLocations, locationQuery]);
+
   const filteredShops = useMemo(() => {
     const location = locationQuery.trim().toLowerCase();
 
@@ -95,15 +119,51 @@ export default function SearchPage() {
         </div>
 
         <div className="flex flex-col gap-5 rounded-xl border border-white/10 bg-surface p-5">
-          <label className="flex flex-col gap-1.5 text-sm text-muted">
+          <label className="relative flex flex-col gap-1.5 text-sm text-muted">
             Location
             <input
               type="text"
               placeholder="e.g. Cape Town"
               value={locationQuery}
-              onChange={(e) => setLocationQuery(e.target.value)}
+              onChange={(e) => {
+                setLocationQuery(e.target.value);
+                setShowLocationSuggestions(true);
+              }}
+              onFocus={() => setShowLocationSuggestions(true)}
+              onBlur={() => setShowLocationSuggestions(false)}
+              role="combobox"
+              aria-expanded={showLocationSuggestions}
+              aria-controls="location-suggestions"
+              aria-autocomplete="list"
+              autoComplete="off"
               className="rounded-lg border border-white/10 bg-background px-3 py-2.5 text-foreground outline-none transition placeholder:text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent"
             />
+            {showLocationSuggestions && locationSuggestions.length > 0 && (
+              <ul
+                id="location-suggestions"
+                role="listbox"
+                className="absolute top-full z-10 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-white/10 bg-surface py-1 shadow-lg"
+              >
+                {locationSuggestions.map((location) => (
+                  <li key={location} role="option" aria-selected={location === locationQuery}>
+                    <button
+                      type="button"
+                      // onMouseDown (not onClick) fires before the input's
+                      // onBlur, so the suggestion is picked instead of the
+                      // dropdown closing out from under the click.
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setLocationQuery(location);
+                        setShowLocationSuggestions(false);
+                      }}
+                      className="block w-full px-3 py-2 text-left text-foreground transition hover:bg-accent/10"
+                    >
+                      {location}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </label>
 
           <div className="flex flex-col gap-2 text-sm text-muted">
