@@ -2,7 +2,6 @@
 
 import { useEffect, useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
 
@@ -23,13 +22,6 @@ type PortfolioImage = {
   storage_path: string;
 };
 
-type Lead = {
-  id: string;
-  car_owner_name: string;
-  status: "new" | "replied";
-  updated_at: string;
-};
-
 const PORTFOLIO_BUCKET = "portfolio-images";
 
 export default function DashboardPage() {
@@ -46,7 +38,6 @@ export default function DashboardPage() {
   const [portfolioImages, setPortfolioImages] = useState<PortfolioImage[]>(
     []
   );
-  const [leads, setLeads] = useState<Lead[]>([]);
 
   const [editing, setEditing] = useState(false);
   const [businessName, setBusinessName] = useState("");
@@ -92,7 +83,7 @@ export default function DashboardPage() {
         return;
       }
 
-      const [{ data: shopServicesData }, { data: portfolioData }, { data: leadsData }] =
+      const [{ data: shopServicesData }, { data: portfolioData }] =
         await Promise.all([
           supabase
             .from("shop_services")
@@ -103,11 +94,6 @@ export default function DashboardPage() {
             .select("id, storage_path")
             .eq("shop_id", shopRow.id)
             .order("created_at"),
-          supabase
-            .from("conversations")
-            .select("id, car_owner_name, status, updated_at")
-            .eq("shop_id", shopRow.id)
-            .order("updated_at", { ascending: false }),
         ]);
 
       if (cancelled) return;
@@ -118,7 +104,6 @@ export default function DashboardPage() {
         new Set((shopServicesData ?? []).map((row) => row.service_id))
       );
       setPortfolioImages(portfolioData ?? []);
-      setLeads(leadsData ?? []);
       setLoading(false);
     }
 
@@ -497,62 +482,6 @@ export default function DashboardPage() {
                 );
               })}
             </div>
-          )}
-        </section>
-
-        <section className="flex flex-col gap-4">
-          <h2 className="font-display text-lg font-medium text-foreground">
-            Leads
-          </h2>
-
-          {leads.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-white/15 bg-surface/50 px-6 py-12 text-center">
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                className="text-muted"
-              >
-                <path
-                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <p className="text-sm text-muted">No quote requests yet.</p>
-            </div>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {leads.map((lead) => (
-                <li key={lead.id}>
-                  <Link
-                    href={`/messages/${lead.id}`}
-                    className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-surface p-4 transition hover:border-accent/50"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <span className="font-medium text-foreground">
-                        {lead.car_owner_name}
-                      </span>
-                      <span className="text-xs text-muted">
-                        {new Date(lead.updated_at).toLocaleString()}
-                      </span>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full px-3 py-1 text-xs ${
-                        lead.status === "new"
-                          ? "bg-accent/15 text-accent"
-                          : "border border-white/10 text-muted"
-                      }`}
-                    >
-                      {lead.status === "new" ? "New" : "Replied"}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
           )}
         </section>
       </main>

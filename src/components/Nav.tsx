@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
 type AuthState =
@@ -12,6 +12,7 @@ type AuthState =
 
 export default function Nav() {
   const router = useRouter();
+  const pathname = usePathname();
   const [auth, setAuth] = useState<AuthState>({ status: "loading" });
 
   useEffect(() => {
@@ -47,6 +48,15 @@ export default function Nav() {
     router.push("/login");
   }
 
+  function shortcutFor(role: "car_owner" | "shop_owner") {
+    if (role === "shop_owner") {
+      if (pathname === "/dashboard") return { href: "/dashboard/leads", label: "Leads" };
+      return { href: "/dashboard", label: "Dashboard" };
+    }
+    if (pathname === "/messages") return { href: "/search", label: "Search" };
+    return { href: "/messages", label: "Messages" };
+  }
+
   return (
     <header className="sticky top-0 z-10 border-b border-white/10 bg-surface/95 backdrop-blur">
       <nav className="mx-auto flex w-full max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
@@ -60,10 +70,10 @@ export default function Nav() {
         <div className="flex items-center gap-5 text-sm">
           {auth.status === "signed-in" && (
             <Link
-              href={auth.role === "shop_owner" ? "/dashboard" : "/messages"}
+              href={shortcutFor(auth.role).href}
               className="text-muted transition hover:text-foreground"
             >
-              {auth.role === "shop_owner" ? "Dashboard" : "Messages"}
+              {shortcutFor(auth.role).label}
             </Link>
           )}
           {auth.status === "signed-in" ? (
