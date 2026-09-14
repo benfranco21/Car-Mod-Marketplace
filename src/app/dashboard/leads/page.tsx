@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
+import { getUnreadConversationIds } from "@/lib/unread";
 
 type Lead = {
   id: string;
@@ -19,6 +20,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -46,15 +48,19 @@ export default function LeadsPage() {
         return;
       }
 
-      const { data: leadsData } = await supabase
-        .from("conversations")
-        .select("id, car_owner_name, status, updated_at")
-        .eq("shop_id", shopRow.id)
-        .order("updated_at", { ascending: false });
+      const [{ data: leadsData }, unread] = await Promise.all([
+        supabase
+          .from("conversations")
+          .select("id, car_owner_name, status, updated_at")
+          .eq("shop_id", shopRow.id)
+          .order("updated_at", { ascending: false }),
+        getUnreadConversationIds(user.id, "shop_owner"),
+      ]);
 
       if (cancelled) return;
 
       setLeads(leadsData ?? []);
+      setUnreadIds(unread);
       setLoading(false);
     }
 
@@ -123,7 +129,13 @@ export default function LeadsPage() {
                   className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-surface p-4 transition hover:border-accent/50"
                 >
                   <div className="flex flex-col gap-1">
-                    <span className="font-medium text-foreground">
+                    <span className="flex items-center gap-2 font-medium text-foreground">
+                      {unreadIds.has(lead.id) && (
+                        <span
+                          aria-label="Unread"
+                          className="h-2 w-2 shrink-0 rounded-full bg-action"
+                        />
+                      )}
                       {lead.car_owner_name}
                     </span>
                     <span className="text-xs text-muted">

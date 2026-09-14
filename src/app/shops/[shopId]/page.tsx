@@ -140,6 +140,7 @@ export default function ShopProfilePage() {
         shop_id: shop.id,
         car_owner_id: viewer.id,
         car_owner_name: viewer.name,
+        last_message_sender_id: viewer.id,
       })
       .select("id")
       .single();

@@ -4,19 +4,26 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { getUnreadConversationIds, CONVERSATION_READ_EVENT } from "@/lib/unread";
 
 type AuthState =
   | { status: "loading" }
   | { status: "signed-out" }
-  | { status: "signed-in"; role: "car_owner" | "shop_owner" };
+  | { status: "signed-in"; id: string; role: "car_owner" | "shop_owner" };
 
 export default function Nav() {
   const router = useRouter();
   const pathname = usePathname();
   const [auth, setAuth] = useState<AuthState>({ status: "loading" });
+  const [hasUnread, setHasUnread] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+
+    async function checkUnread(userId: string, role: "car_owner" | "shop_owner") {
+      const unreadIds = await getUnreadConversationIds(userId, role);
+      if (!cancelled) setHasUnread(unreadIds.size > 0);
+    }
 
     async function load() {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -34,14 +41,42 @@ export default function Nav() {
         .single();
 
       if (cancelled) return;
-      setAuth(userRow ? { status: "signed-in", role: userRow.role } : { status: "signed-out" });
+
+      if (!userRow) {
+        setAuth({ status: "signed-out" });
+        return;
+      }
+
+      setAuth({ status: "signed-in", id: user.id, role: userRow.role });
+      await checkUnread(user.id, userRow.role);
     }
 
     load();
+
+    // Marking a conversation read happens in a different component's effect
+    // (the thread page), racing independently against the check above — this
+    // re-checks once that finishes, so the dot doesn't linger on the very
+    // page that just cleared it.
+    async function onConversationRead() {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
+      if (!user || cancelled) return;
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (!userRow || cancelled) return;
+      await checkUnread(user.id, userRow.role);
+    }
+
+    window.addEventListener(CONVERSATION_READ_EVENT, onConversationRead);
+
     return () => {
       cancelled = true;
+      window.removeEventListener(CONVERSATION_READ_EVENT, onConversationRead);
     };
-  }, []);
+  }, [pathname]);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -68,14 +103,26 @@ export default function Nav() {
         </Link>
 
         <div className="flex items-center gap-5 text-sm">
-          {auth.status === "signed-in" && (
-            <Link
-              href={shortcutFor(auth.role).href}
-              className="text-muted transition hover:text-foreground"
-            >
-              {shortcutFor(auth.role).label}
-            </Link>
-          )}
+          {auth.status === "signed-in" &&
+            (() => {
+              const shortcut = shortcutFor(auth.role);
+              const showDot =
+                hasUnread && (shortcut.label === "Leads" || shortcut.label === "Messages");
+              return (
+                <Link
+                  href={shortcut.href}
+                  className="relative text-muted transition hover:text-foreground"
+                >
+                  {shortcut.label}
+                  {showDot && (
+                    <span
+                      aria-label="Unread messages"
+                      className="absolute -right-2 -top-1 h-2 w-2 rounded-full bg-action"
+                    />
+                  )}
+                </Link>
+              );
+            })()}
           {auth.status === "signed-in" ? (
             <button
               onClick={handleSignOut}

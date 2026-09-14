@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
+import { markConversationRead } from "@/lib/unread";
 
 type Viewer = {
   id: string;
@@ -84,6 +85,7 @@ export default function ConversationPage() {
       }
 
       setConversation(conversationRow);
+      markConversationRead(conversationRow.id, userRow.id);
 
       const [{ data: messagesData }, otherPartyResult] = await Promise.all([
         supabase
@@ -141,6 +143,7 @@ export default function ConversationPage() {
       .from("conversations")
       .update({
         updated_at: new Date().toISOString(),
+        last_message_sender_id: viewer.id,
         ...(viewer.role === "shop_owner" ? { status: "replied" } : {}),
       })
       .eq("id", conversation.id);

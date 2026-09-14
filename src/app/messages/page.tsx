@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
+import { getUnreadConversationIds } from "@/lib/unread";
 
 type Conversation = {
   id: string;
@@ -18,6 +19,7 @@ export default function MessagesPage() {
 
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -31,16 +33,20 @@ export default function MessagesPage() {
         return;
       }
 
-      const { data } = await supabase
-        .from("conversations")
-        .select("id, status, updated_at, shops(business_name)")
-        .eq("car_owner_id", user.id)
-        .order("updated_at", { ascending: false })
-        .returns<Conversation[]>();
+      const [{ data }, unread] = await Promise.all([
+        supabase
+          .from("conversations")
+          .select("id, status, updated_at, shops(business_name)")
+          .eq("car_owner_id", user.id)
+          .order("updated_at", { ascending: false })
+          .returns<Conversation[]>(),
+        getUnreadConversationIds(user.id, "car_owner"),
+      ]);
 
       if (cancelled) return;
 
       setConversations(data ?? []);
+      setUnreadIds(unread);
       setLoading(false);
     }
 
@@ -114,7 +120,13 @@ export default function MessagesPage() {
                   className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-surface p-4 transition hover:border-accent/50"
                 >
                   <div className="flex flex-col gap-1">
-                    <span className="font-medium text-foreground">
+                    <span className="flex items-center gap-2 font-medium text-foreground">
+                      {unreadIds.has(conversation.id) && (
+                        <span
+                          aria-label="Unread"
+                          className="h-2 w-2 shrink-0 rounded-full bg-action"
+                        />
+                      )}
                       {conversation.shops?.business_name ?? "Unknown shop"}
                     </span>
                     <span className="text-xs text-muted">
