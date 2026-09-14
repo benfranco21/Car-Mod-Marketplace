@@ -564,3 +564,67 @@ the demo data above covers the "seed shops" half of that phase; real
 outreach is still to come. The pending email-confirmation toggle above
 should happen before that.
 
+## Post-testing feature requests: COMPLETE, verified, live
+
+Three fixes/features from real testing feedback, each verified locally
+and against `https://car-mod-marketplace.vercel.app` with a real
+Playwright session (desktop 1280px + mobile 390px) and pushed
+individually.
+
+**Nav shortcut fix** — the shared `Nav` previously always linked shop
+owners to `/dashboard` and car owners to `/messages`, even while
+already on that exact page (a dead "Dashboard" link while on
+Dashboard). `Nav` is now pathname-aware: on `/dashboard` it links to a
+new `/dashboard/leads` page instead (the old Leads section, extracted
+out of `dashboard/page.tsx` into its own route — a real page, not just
+an anchor scroll, matching how car owners already have `/messages` as
+a separate page from `/search`); on `/dashboard/leads` it links back to
+`/dashboard`; on `/messages` it links to `/search`; everywhere else,
+behavior is unchanged.
+
+**Unread message indicators** (migration:
+`supabase/migrations/20260914150000_unread_message_tracking.sql`) — a
+small red dot on the nav's Messages/Leads link and next to individual
+conversations in `/messages` and `/dashboard/leads`, WhatsApp-style.
+New `conversation_reads` table (one row per participant per
+conversation, RLS restricted to `user_id = auth.uid()` so neither side
+can touch the other's read state — deliberately a separate table
+rather than two nullable columns on `conversations`, to avoid needing
+`WITH CHECK` gymnastics after last week's RLS findings) plus a
+denormalized `conversations.last_message_sender_id` so unread status
+is computable without scanning `messages` on every page load. Shared
+`src/lib/unread.ts` helper powers all three surfaces. Opening a thread
+upserts the read row; since `Nav`'s unread check runs in a separate
+component with its own independent fetch, it was initially possible
+for `Nav` to finish checking *before* the thread page's mark-as-read
+call landed, leaving a stale dot on the very page that just cleared it
+— fixed by having `markConversationRead` fire a `window` event that
+`Nav` listens for and re-checks against. Caught and fixed by an actual
+Playwright run through a real two-sided conversation, not just by
+reasoning about the logic — the race above only showed up that way.
+
+**Location autocomplete on `/search`** — replaced the free-text
+location filter with a dropdown sourced from the distinct locations of
+`shops` already loaded on the page (not a static list, no extra
+query), so new locations appear automatically as shops register with
+one. Shows all locations on focus, narrows as you type, selects via
+`onMouseDown` (fires before the input's `onBlur`, so a click doesn't
+get swallowed by the dropdown closing first). Deduped case-
+insensitively — real demo data already had both "Cape Town" and
+"cape town" for two different shops, which without dedup showed as two
+separate suggestions for the same place; the underlying result
+filtering was already case-insensitive, only the suggestion list
+wasn't.
+
+Demo Log Ins:
+
+Here's the full demo login list — all verified working just now:
+
+Shop	Email	Password
+Cape Town Wrap & Tint Co.	jaco.meyer@carmoddemo.invalid	CarModDemo2026!
+Pretoria Wrap Works	annemarie.botha@carmoddemo.invalid	CarModDemo2026!
+Durban Custom Fabrication	sipho.dube@carmoddemo.invalid	CarModDemo2026!
+Joburg Alloy Wheel Studio	thabo.nkosi@carmoddemo.invalid	CarModDemo2026!
+Highveld Exhaust & Tuning	pieter.vanwyk@carmoddemo.invalid	CarModDemo2026!
+Mother City Dyno & Tuning	ryan.adams@carmoddemo.invalid	CarModDemo2026!
+Car owner: demo.carowner@gmail.com / CarModDemo2026!
