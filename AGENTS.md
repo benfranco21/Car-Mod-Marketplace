@@ -373,7 +373,7 @@ confirmed live against `https://car-mod-marketplace.vercel.app/` via
 both a content-marker curl check and real Playwright screenshots
 against the live URL, matching the local screenshots pixel-for-pixel.
 
-## Demo data seeded for testing/pitching: mostly complete
+## Demo data seeded for testing/pitching: COMPLETE, verified
 
 Ahead of Phase 5's real shop outreach, seeded 6 demo shop accounts +
 1 demo car owner account directly into the live Supabase database
@@ -408,17 +408,71 @@ confirm-reply pass worked with zero console errors — then that one
 test conversation was deleted afterward so the demo pair starts with
 a clean compose box rather than an existing thread.
 
-**Still pending:**
-- The 2-3 "portfolio photos" per shop are custom flat-illustration
-  graphics (wrapped car, alloy wheel, exhaust tips, etc.), not real
-  stock photography — no reliable image source was available in that
-  session. Swap for real stock/placeholder car photos before this is
-  shown to actual shop owners.
-- The 6 demo shop-owner email addresses (e.g. `jaco.meyer@gmail.com`)
-  were invented for realism, not checked against real inboxes. Since
-  they were only ever used for direct-SQL account creation (GoTrue
-  never sent anything to them), this is low-risk, but worth confirming
-  none happen to be real/active before relying on this data long-term.
+**Follow-up pass before sharing with the car club, done this session:**
+
+- Replaced all 14 placeholder illustration photos with real openly-
+  licensed photos (Openverse — Flickr/Wikimedia Commons CC content;
+  Pexels/Unsplash were tried first but required an API key this
+  session didn't have) matching each shop's actual services: wraps/PPF
+  shops got real wrapped-car photography, the wheel studio got wheel
+  close-ups, the fabrication shop got TIG-welded stainless work, the
+  exhaust/tuning shops got exhaust and rolling-road dyno shots. Several
+  first-choice candidates were rejected after visual review — real
+  third-party businesses' own signage in the shot (a UK fabrication
+  company's shopfront, a "Dyno Dynamics"/"Ginetta Cars" branded rig), a
+  real stranger's visible number plate, or just a bad category match
+  (a "car window tinting" street sign instead of an actual car) — none
+  of those went up. Final counts: Cape Town Wrap & Tint Co. (3),
+  Pretoria Wrap Works (3), Highveld Exhaust & Tuning (3), Durban Custom
+  Fabrication (2), Joburg Alloy Wheel Studio (2), Mother City Dyno &
+  Tuning (1) — fewer than the original 2-3 where no unbranded/on-theme
+  photo could be found rather than keeping a weak filler image.
+  Uploaded through each shop owner's own real authenticated session
+  (matching the original seeding technique, not a service-role
+  bypass), which required resetting all 6 demo accounts to one new
+  shared password via `DATABASE_URL` (bcrypt hash written directly to
+  `auth.users`) since the original passwords weren't available in this
+  session — **new demo shop login password: `CarModDemo2026!`** (same
+  6 email addresses, see below). Verified every resulting public
+  storage URL resolves (HTTP 200).
+- Renamed all 6 demo shop-owner emails from invented `@gmail.com`
+  addresses (e.g. `jaco.meyer@gmail.com`) to `@carmoddemo.invalid` —
+  `.invalid` is an RFC 2606-reserved TLD guaranteed to never resolve or
+  accept real mail. This was precautionary: there was no reliable way
+  to confirm a specific Gmail mailbox doesn't belong to a real person
+  without intrusive probing, so given any doubt the addresses were
+  swapped rather than left as-is. Confirmed login still works with the
+  new addresses.
+- Full core-loop walkthrough against production
+  (`https://car-mod-marketplace.vercel.app`) via a real Playwright
+  session: homepage → `/search` → service+location filter → shop
+  profile, at both mobile (390px) and desktop (1280px) widths; then a
+  **real signup** through the `/signup/car-owner` form (not a direct-
+  SQL account) as a fresh car owner. This surfaced that **email
+  confirmation is now back on** in production (the signup form
+  correctly showed "check your email" instead of an immediate
+  session) — confirming the earlier security-pass request to re-enable
+  it took effect. Confirmed that one test account the same
+  `DATABASE_URL` way as every prior phase's verification (bypassing
+  only the email click), then continued: logged in for real, sent a
+  quote request to Cape Town Wrap & Tint Co., logged in as that shop
+  and saw the lead on the dashboard, replied, and confirmed the reply
+  appeared back on the car owner's side in both the thread and the
+  `/messages` inbox — repeated on a mobile viewport too. Zero console
+  errors, zero failed network requests, across the entire pass. All
+  test data (the temporary car owner account, cascading to its
+  conversation/messages) was deleted afterward.
+- **Found but deliberately not touched**: alongside the 6 documented
+  demo shops, the live database also has a 7th shop ("slowlys",
+  Cape Town) owned by the user's own real email
+  (`benfranco04@gmail.com`), plus two car-owner accounts
+  (`nerd8558@gmail.com` and a leftover `@test.local` account) and one
+  real conversation between them — none of this matches the documented
+  demo data above, so it's most likely the user's own manual testing
+  from a previous session. Left entirely alone since it wasn't part of
+  this task and looked like real in-progress work, not debris — worth
+  the user confirming whether it should stay, get folded into the demo
+  set, or be cleaned up.
 
 ## Billing: PayFast Sole Trader registration in progress
 
