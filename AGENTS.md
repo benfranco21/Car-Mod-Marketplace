@@ -433,9 +433,80 @@ until the user confirms this registration is complete and shares the
 resulting merchant credentials — there's nothing to build against
 yet.
 
+## Pre-launch security pass: mostly complete
+
+Ahead of the first real people (the user's car club) using the app,
+did a full RLS/secrets audit rather than trusting the phase-by-phase
+docs above at face value.
+
+Re-audited every RLS policy on all 7 tables plus the storage bucket
+directly against `pg_policies` on the live database (not just reading
+the migration files), confirming: `users` rows are readable/writable
+only by their own owner (`auth.uid() = id`); `shops`/`services`/
+`shop_services`/`portfolio_images` are intentionally public-read per
+Phase 1-3; `conversations`/`messages` are restricted to the two
+participants via `shops.owner_id`/`car_owner_id` joins, confirmed with
+real anonymous REST calls returning `[]`. Found and fixed two gaps
+beyond what the phase docs had flagged, applied directly to the live
+database via `DATABASE_URL` (migration:
+`supabase/migrations/20260914120000_storage_listing_lockdown.sql`):
+
+- **Storage listing hole** (the one previously flagged and left
+  unresolved): the Phase 2 `storage.objects` SELECT policy was
+  `using (bucket_id = 'portfolio-images')` with no owner check — since
+  the bucket's `public = true` flag already serves individual files
+  via `getPublicUrl()` without going through RLS at all, that policy's
+  only real effect was letting *any* anonymous client call the Storage
+  API's `list()` endpoint across the whole bucket and enumerate every
+  shop's folder/filenames. Replaced it with an owner-only SELECT
+  policy (nothing in the app ever calls `.list()`, so this is a pure
+  tightening, no functional change). Verified with a raw anonymous
+  REST call to `/storage/v1/object/list/portfolio-images` returning
+  `[]` post-fix, and confirmed an existing photo's public URL still
+  resolves (HTTP 200) — the public-bucket download path is unaffected.
+- **Missing `WITH CHECK` on two UPDATE policies**: `shops` and
+  `conversations` only had a `USING` clause (which rows a participant
+  may touch), not a `WITH CHECK` (what the resulting row may look
+  like). Since `shops.owner_id` is itself publicly readable (shops are
+  public profiles), a shop owner could have crafted a direct REST
+  `PATCH` (bypassing the UI, which never does this) to reassign their
+  shop's `owner_id` to another real user's id — or repoint a
+  conversation's `shop_id`/`car_owner_id` — handing that row's private
+  messages to an arbitrary account. Fixed with a matching `WITH CHECK`
+  on the `shops` policy and a `BEFORE UPDATE` trigger on
+  `conversations` that rejects any change to `shop_id`/`car_owner_id`/
+  `car_owner_name`. Verified the trigger actually raises on a direct
+  update attempt (`shop_id, car_owner_id, and car_owner_name cannot be
+  changed after creation`), and confirmed via `grep` that no app code
+  path ever updates those columns, so nothing legitimate is affected.
+
+Secrets audit: searched all tracked files, full git history, and the
+client bundle surface (`src/lib/supabase/client.ts`, the one place env
+vars reach the browser) for a service-role key or `DATABASE_URL`.
+Found none — only `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY`
+are ever read client-side, `/api/health` only returns booleans (never
+the values), and `DATABASE_URL` exists solely in the git-ignored
+`.env.local`, used only for one-off admin scripting exactly as
+Phase 2 set it up to be — never committed, never sent to the browser.
+`.env.local.example` (the only tracked `.env*` file) contains
+placeholder text, not real values.
+
+**Still pending — needs the user, not code:**
+- **Re-enabling "confirm email"** for real signups. This is a Supabase
+  Dashboard toggle (Authentication → Sign In / Providers → Email →
+  "Confirm email"), not something in this repo or reachable via SQL/
+  the `DATABASE_URL` connection — GoTrue's auth config isn't a Postgres
+  table. Needs to be flipped on in the dashboard before real car-club
+  members sign up.
+- Given the RLS/storage findings above, worth deleting the demo
+  shop-owner accounts' actual passwords/sessions (or rotating them)
+  once real outreach starts, since they were seeded via direct SQL
+  insert rather than the normal signup flow.
+
 ## What's next
 
 Phase 5 (walk real people through the app) per `project-roadmap.md` —
 the demo data above covers the "seed shops" half of that phase; real
-outreach is still to come.
+outreach is still to come. The pending email-confirmation toggle above
+should happen before that.
 
