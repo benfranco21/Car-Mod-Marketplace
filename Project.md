@@ -1,4 +1,4 @@
-# Car Mod Marketplace — Project Status
+# ModFind — Project Status
 
 *A plain-language status update, written for you, not for a future AI
 session. Last updated 24 August 2026.*

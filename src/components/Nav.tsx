@@ -99,7 +99,7 @@ export default function Nav() {
           href="/"
           className="font-display text-lg font-semibold tracking-wide text-foreground"
         >
-          Car Mod <span className="text-accent">Marketplace</span>
+          Mod<span className="text-accent">Find</span>
         </Link>
 
         <div className="flex items-center gap-5 text-sm">

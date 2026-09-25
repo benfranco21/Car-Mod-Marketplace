@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Car Mod Marketplace",
+  title: "ModFind",
   description: "Find and connect with car modification shops near you.",
 };
 

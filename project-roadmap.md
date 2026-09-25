@@ -1,4 +1,4 @@
-# Car Mod Marketplace — Project Roadmap
+# ModFind — Project Roadmap
 
 ## Vision
 A platform connecting South African car modification businesses (wrap shops,

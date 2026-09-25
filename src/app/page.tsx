@@ -29,7 +29,7 @@ export default function Home() {
             Find the right shop for your build
           </h1>
           <p className="max-w-xl text-lg text-muted">
-            Car Mod Marketplace connects car owners with wrap, exhaust, wheel,
+            ModFind connects car owners with wrap, exhaust, wheel,
             fabrication, PPF, and tuning shops — search by what you need, then
             message the shop directly.
           </p>
