@@ -11,12 +11,19 @@ export default function ShopSignupPage() {
   const [password, setPassword] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [location, setLocation] = useState("");
+  const [website, setWebsite] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmationSent, setConfirmationSent] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+
+    // Honeypot: a field real users never see or fill, but simple signup
+    // bots that blindly fill every input tend to. Silently drop the
+    // submission rather than tell an automated client why it failed.
+    if (website !== "") return;
+
     setError(null);
     setSubmitting(true);
 
@@ -116,10 +123,28 @@ export default function ShopSignupPage() {
             <input
               type="password"
               required
-              minLength={6}
+              minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="rounded-lg border border-white/10 bg-background px-3 py-2.5 text-foreground outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
+            />
+            <span className="text-xs text-muted/80">
+              At least 8 characters, with a mix of upper and lowercase
+              letters and a number.
+            </span>
+          </label>
+
+          <label
+            aria-hidden="true"
+            className="absolute left-[-9999px] h-0 w-0 overflow-hidden"
+          >
+            Website
+            <input
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
             />
           </label>
 
