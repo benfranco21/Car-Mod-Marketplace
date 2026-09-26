@@ -708,3 +708,15 @@ Car owner: demo.carowner@gmail.com / CarModDemo2026!
   Supabase supports CAPTCHA (hCaptcha or Cloudflare Turnstile) for
   signups, which would need an account with one of those providers plus
   frontend wiring; not set up, since no such account exists yet.
+
+**End-of-session status (27 September 2026):** `/privacy` and `/terms`
+are live, account deletion is built, password requirements are fixed
+to match what Supabase actually enforces, and honeypot bot protection
+is on both signup forms. **Two blockers remain before this goes in
+front of real users:**
+
+1. **`SUPABASE_SERVICE_ROLE_KEY` isn't in Vercel's env vars yet** —
+   account deletion fails gracefully without it, but doesn't work.
+2. **`privacy@modfind.co.za` can't receive mail** — the privacy policy
+   names it as the contact address, but nothing is set up to actually
+   deliver there (see the domain/email section above).
