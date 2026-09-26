@@ -123,6 +123,11 @@ export default function Nav() {
                 </Link>
               );
             })()}
+          {auth.status === "signed-in" && auth.role === "car_owner" && (
+            <Link href="/account" className="text-muted transition hover:text-foreground">
+              Account
+            </Link>
+          )}
           {auth.status === "signed-in" ? (
             <button
               onClick={handleSignOut}

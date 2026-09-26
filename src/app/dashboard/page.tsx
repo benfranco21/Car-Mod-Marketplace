@@ -4,6 +4,7 @@ import { useEffect, useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
+import DeleteAccountSection from "@/components/DeleteAccountSection";
 
 type Shop = {
   id: string;
@@ -484,6 +485,8 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
+
+        <DeleteAccountSection />
       </main>
     </>
   );
