@@ -628,3 +628,83 @@ Joburg Alloy Wheel Studio	thabo.nkosi@carmoddemo.invalid	CarModDemo2026!
 Highveld Exhaust & Tuning	pieter.vanwyk@carmoddemo.invalid	CarModDemo2026!
 Mother City Dyno & Tuning	ryan.adams@carmoddemo.invalid	CarModDemo2026!
 Car owner: demo.carowner@gmail.com / CarModDemo2026!
+
+## modfind.co.za: domain, email, and rebrand — COMPLETE, verified, live
+
+- Domain registered as a verified Resend sending domain (5 DNS records:
+  A for Vercel, DKIM/MX/SPF/CNAME for Resend) and added to the
+  `car-mod-marketplace` Vercel project. Both confirmed live once DNS
+  propagated — a DNSSEC trace initially showed the domain wasn't even
+  delegated in the `.co.za` zone yet, which resolved on its own within
+  the same day (normal for a fresh `.co.za` registration).
+- Supabase's custom SMTP now sends through Resend as `"ModFind"
+  <noreply@modfind.co.za>`, entered manually in the dashboard by the
+  user (host `smtp.resend.com`, port 465, username `resend`). Email
+  rate limit raised to 30/hour. Verified for real, twice: once via a
+  signup through the actual UI with the user checking their own inbox,
+  and again independently via Resend's `/emails` log API (`last_event:
+  "delivered"`, correct `from`), after the first Resend key died
+  mid-session and had to be replaced.
+- **`privacy@modfind.co.za`** is referenced in the privacy policy
+  (`/privacy`) as the contact address, but the domain's Resend
+  configuration has `receiving: disabled` — Resend's MX record is only
+  for `send.modfind.co.za` bounce/feedback handling, not a general
+  inbox for the apex domain. **This address can't currently receive
+  mail** unless separate email hosting (Google Workspace, Zoho Mail,
+  etc.) is set up for the domain. Worth fixing before this is relied
+  on for real privacy requests.
+- Product rebranded from "Car Mod Marketplace" to "ModFind" throughout
+  the visible UI (title, Nav wordmark, homepage copy) plus technical
+  identifiers (`package.json` name, local `supabase/config.toml`
+  project_id). Deliberately left alone: the GitHub repo name, and
+  historical log entries elsewhere in this file that accurately
+  describe what happened under the old name at the time.
+- Note for future sessions: the `car-mod-marketplace.vercel.app` alias
+  started returning HTTP 403 to automated requests partway through this
+  work (confirmed not a deploy issue — `modfind.co.za` served the same
+  content fine throughout, including with a browser user-agent).
+  Likely Vercel's bot/abuse protection reacting to the volume of
+  scripted verification requests this session made against that one
+  URL. Prefer verifying against `modfind.co.za` going forward.
+
+## Privacy, terms, and account deletion — mostly complete
+
+- `/privacy` and `/terms` pages, plus a new site-wide `Footer`
+  component (rendered once from root `layout.tsx`, unlike `Nav` which
+  every page includes individually) linking to both. Privacy policy
+  covers what's collected, why, where (Supabase/Vercel/Resend), and
+  user rights — see the `privacy@modfind.co.za` caveat above.
+- Account deletion: new `/api/account/delete` route verifies the
+  caller's own access token server-side against Supabase's auth API
+  (never trusts a client-supplied user id — confirmed this design with
+  the user before building it), removes their portfolio storage files,
+  then deletes their `auth.users` row via the service-role Admin API —
+  which cascades through `shops`/`shop_services`/`portfolio_images`/
+  `conversations`/`messages` automatically via the schema's existing
+  `on delete cascade` foreign keys, so nothing else needs deleting by
+  hand. Shared `DeleteAccountSection` component (type-`DELETE`-to-
+  confirm) used on `/dashboard` for shop owners and a new `/account`
+  page for car owners, who didn't have any settings area before — Nav
+  gets an "Account" link for them to reach it.
+  - **Still needs `SUPABASE_SERVICE_ROLE_KEY` added to the Vercel
+    project's environment variables** before deletion actually works —
+    without it, the route fails gracefully with a clear error
+    ("Account deletion isn't configured on this deployment yet")
+    rather than doing anything destructive, verified locally. Once
+    added, this still needs one real end-to-end test (delete a real
+    throwaway account and confirm the auth row, shop/conversation data,
+    and storage files are all actually gone) before considering this
+    fully done.
+- Password field fixed: Supabase's server already enforced 8+
+  characters with mixed case and a digit, but the client-side form
+  still said `minLength={6}` with no hint of the real rule — found by
+  testing the raw signup API directly. Now matches (8, with a one-line
+  hint) on both signup forms.
+- Basic bot protection: added a visually-hidden honeypot field to both
+  signup forms (real users never see or fill it; simple bots that fill
+  every input tend to) — confirmed it silently blocks a filled
+  submission before it reaches Supabase, and doesn't affect the normal
+  signup path. This is a basic deterrent, not real bot protection —
+  Supabase supports CAPTCHA (hCaptcha or Cloudflare Turnstile) for
+  signups, which would need an account with one of those providers plus
+  frontend wiring; not set up, since no such account exists yet.
